@@ -12,7 +12,8 @@ use std::time::Duration;
 // extern crate dbus;
 
 
-// const AGENT_INTERFACE: &str = "org.bluez.AgentManager1";
+const AGENT_INTERFACE: &str = "org.bluez.AgentManager1";
+const REG_AGENT: &str = "RegisterAgent";
 // static SERVICE_NAME: &'static str = "org.bluez";
 pub(crate) const MANAGER_PATH: &str = "/org/bluez/agent";
 
@@ -41,33 +42,59 @@ impl<'a> BluetoothAgent <'a> {
             conn: Connection::get_private(dbus::BusType::System).unwrap(),
         }
     }
-
-    pub fn register_agent() -> Result<(), Box<dyn std::error::Error>> {
-        // Connect to the session bus (or system bus if needed)
-        let conn = Connection::get_private(dbus::BusType::System).unwrap();
-        
-        // Define the BlueZ path and interface
+    pub fn check_agent_manager_available() -> Result<bool, Box<dyn std::error::Error>> {
+        // Connect to the system bus
+        let conn = Connection::get_private(dbus::BusType::System)?;
+    
+        // Define the BlueZ service and the object path
         let bluez_service = "org.bluez";
-        let agent_path = "/org/bluez/agent";
+        let agent_manager_path = "/org/bluez/agent_manager";  // Replace with the correct path
+    
+        // Introspect the object path to see which interfaces are available
+        let msg = Message::new_method_call(bluez_service, agent_manager_path, "org.freedesktop.DBus.Introspectable", "Introspect")?;
+    
+        // Send the introspection message
+        let response: Message = conn.send_with_reply_and_block(msg, 1000)?;
+    
+        // Read the introspection data, which is XML describing the available interfaces
+        let introspection_data: String = response.read1()?;
+        println!("Introspection data: {}", introspection_data);
+        // Check if the org.bluez.AgentManager1 interface is in the introspection data
+        if introspection_data.contains("org.bluez.AgentManager1") {
+            println!("The org.bluez.AgentManager1 interface is available!");
+            Ok(true)
+        } else {
+            println!("The org.bluez.AgentManager1 interface is not available.");
+            Ok(false)
+        }
+    }
+    
+    pub fn register_agent(session: &'a BluetoothSession,) -> Result<(), Box<dyn std::error::Error>> {
+      
+        // Connect to the system bus
+        // let conn = Connection::get_private(dbus::BusType::System)?;
+    
+        // Define the BlueZ service and the interface
+        let bluez_service = "org.bluez";
+        let agent_path = "/org/bluez/agent";  // The agent object path
+        let agent_manager_path = "/org/bluez/agent";  // AgentManager path
+    
+        // Send the RegisterAgent request to the AgentManager interface
+        let msg = Message::new_method_call(bluez_service, agent_manager_path, AGENT_INTERFACE, REG_AGENT)?
+            .append2(agent_path, "NoInputNoOutput");
 
-        // Register the agent with BlueZ
-        let agent_interface = "org.bluez.Agent1";
-        let agent_manager_path = "/org/bluez";
-
-        // Create the Agent object
-        let agent_object = conn.with_path(bluez_service, agent_path, 1000);
-
-        // Send the RegisterAgent request
-        let msg = Message::new_method_call(bluez_service, agent_manager_path, agent_interface, "RegisterAgent")?
-            .append1(agent_path)
-            .append1("NoInputNoOutput");  // Specify capabilities
-
-        // Send the message
-        let _response: Message = conn.send_with_reply_and_block(msg, 1000)?;
-
-        println!("Agent registered successfully!");
+    
+        // Send the message and block until a reply is received
+        let _response: Message = session.get_connection().send_with_reply_and_block(msg, 1000)?;
         
-        // In a real application, the event loop would continue to process messages.
+        if BluetoothAgent::check_agent_manager_available()? {
+            println!("AgentManager available");
+        }
+        // Notify that the agent has been successfully registered
+        println!("Agent registered successfully!");
+        // while true {
+        //     std::thread::sleep(Duration::from_secs(1));
+        // }
         Ok(())
     }
 
