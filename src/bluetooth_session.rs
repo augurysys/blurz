@@ -3,6 +3,7 @@ use dbus::{BusType, ConnMsgs, Connection};
 use std::error::Error;
 
 static BLUEZ_MATCH: &'static str = "type='signal',sender='org.bluez'";
+static AGENT_PATH: &'static str = "type='signal',sender='org.bluez.Agent1'";
 
 #[derive(Debug)]
 pub struct BluetoothSession {
@@ -18,7 +19,11 @@ impl BluetoothSession {
                 String::from(BLUEZ_MATCH)
             }
         };
-
+        println!("I am HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+        // let agent_rule = String::from(AGENT_PATH);
+        // let c = Connection::get_private(BusType::System)?;
+        // c.add_match(agent_rule.as_str())?;
+        
         let c = try!(Connection::get_private(BusType::System));
         c.add_match(rule.as_str())?;
         Ok(BluetoothSession::new(c))
