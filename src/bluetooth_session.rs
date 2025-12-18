@@ -24,10 +24,23 @@ impl BluetoothSession {
         Ok(BluetoothSession::new(c))
     }
 
+    /// Create a BluetoothSession without any match rules
+    /// This is useful for agents that need to receive method calls, not just signals
+    pub fn create_session_unfiltered() -> Result<BluetoothSession, Box<Error>> {
+        let c = try!(Connection::get_private(BusType::System));
+        Ok(BluetoothSession::new(c))
+    }
+
     fn new(connection: Connection) -> BluetoothSession {
         BluetoothSession {
             connection: connection,
         }
+    }
+
+    /// Create a BluetoothSession from an existing D-Bus connection
+    /// This is useful for agents that need to receive method calls, not just signals
+    pub fn from_connection(connection: Connection) -> BluetoothSession {
+        BluetoothSession::new(connection)
     }
 
     pub fn get_connection(&self) -> &Connection {
