@@ -142,7 +142,9 @@ impl BluetoothAuthAgent {
         let mut signal_count = 0;
         
         // Receive messages with timeout - incoming() returns an iterator
-        for msg in conn.incoming(timeout_ms) {
+        // Convert i32 to u32 (clamp negative values to 0)
+        let timeout_u32 = if timeout_ms < 0 { 0 } else { timeout_ms as u32 };
+        for msg in conn.incoming(timeout_u32) {
             let msg_type = msg.msg_type();
             let msg_path = msg.path();
             let msg_interface = msg.interface();
